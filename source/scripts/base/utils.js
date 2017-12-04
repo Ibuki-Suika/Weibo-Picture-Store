@@ -166,4 +166,29 @@ export class Utils {
         Weibo[func.name] = func;
     }
 
+    /**
+     * @param {string} byteSequence
+     * @return {Uint8Array}
+     */
+    static bufferDecode(byteSequence) {
+        const bufferView = new Uint8Array(byteSequence.length);
+        for (let i = 0; i < byteSequence.length; i++) {
+            bufferView[i] = byteSequence.codePointAt(i);
+        }
+        return bufferView;
+    }
+
+    /**
+     * @param {ArrayBuffer|ArrayBufferView} buffer
+     * @return {string}
+     */
+    static bufferEncode(buffer) {
+        const fragment = {result: ""};
+        const bufferView = new Uint8Array(buffer);
+        for (let i = 0; i < bufferView.length; i++) {
+            fragment.result += String.fromCharCode(bufferView[i]);
+        }
+        return fragment.result;
+    }
+
 }
