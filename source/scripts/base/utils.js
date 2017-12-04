@@ -179,7 +179,7 @@ export class Utils {
     }
 
     /**
-     * @param {ArrayBuffer|ArrayBufferView} buffer
+     * @param {ArrayBuffer|ArrayBufferView|ArrayBufferLike} buffer
      * @return {string}
      */
     static bufferEncode(buffer) {
