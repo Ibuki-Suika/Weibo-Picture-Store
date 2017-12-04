@@ -7,6 +7,11 @@ import {
 import {notifyId as getStatusNotifyId} from "./core/get-status.js";
 import {filePurity} from "./core/file-purity.js";
 import {fileUpload} from "./core/file-upload.js";
+import {
+    defaultPrefix,
+    defaultSuffix,
+} from "./sharre/share-between-pages.js";
+import APNGCodec from "../APNG-Codec/source/apng-codec.js";
 
 
 const notifyId = Utils.randomString(16);
@@ -153,6 +158,39 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             iconUrl: chrome.i18n.getMessage("notification_icon"),
             title: chrome.i18n.getMessage("warn_title"),
             message: chrome.i18n.getMessage("resource_without_cors_mode"),
+        });
+    }
+    if (message && message.type === transferType.fromCanvasFrame) {
+        /**
+         * @see https://bugs.chromium.org/p/chromium/issues/detail?id=680046
+         * @todo Use Web Worker
+         */
+        const {buffers, delays, w, h} = message.data;
+        const bufferViews = buffers.map(s => Utils.bufferDecode(s));
+        console.time("APNG Encoder");
+        const arrayBuffer = APNGCodec.encode(bufferViews, w, h, 0, delays);
+        console.timeEnd("APNG Encoder");
+        filePurity([{
+            blob: new Blob([arrayBuffer], {type: "image/png"}),
+            mimeType: "image/png",
+            readType: "arrayBuffer",
+            result: arrayBuffer,
+        }]).then(result => fileUpload(result)).then(result => {
+            const buffer = [];
+            for (const item of result) {
+                const url = `${defaultPrefix + item.pid + acceptType[item.mimeType].typo + defaultSuffix}`;
+                buffer.push(url);
+            }
+            const text = buffer.join("\n");
+            Utils.writeToClipboard(text, () => {
+                text && chrome.notifications.create(notifyId, {
+                    type: "basic",
+                    iconUrl: chrome.i18n.getMessage("notification_icon"),
+                    title: chrome.i18n.getMessage("info_title"),
+                    message: chrome.i18n.getMessage("write_to_clipboard"),
+                    contextMessage: chrome.i18n.getMessage("write_to_clipboard_hinter"),
+                });
+            });
         });
     }
 });
