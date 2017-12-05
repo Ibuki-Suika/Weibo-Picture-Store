@@ -175,28 +175,49 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 }
             };
             xhr.send();
-        }).then(arrayBuffer => filePurity([{
-            blob: new Blob([arrayBuffer], {type: "image/png"}),
-            mimeType: "image/png",
-            readType: "arrayBuffer",
-            result: arrayBuffer,
-        }])).then(result => fileUpload(result)).then(result => {
-            const buffer = [];
-            for (const item of result) {
-                const url = `${defaultPrefix + item.pid + acceptType[item.mimeType].typo + defaultSuffix}`;
-                buffer.push(url);
-            }
-            const text = buffer.join("\n");
-            Utils.writeToClipboard(text, () => {
-                text && chrome.notifications.create(notifyId, {
-                    type: "basic",
-                    iconUrl: chrome.i18n.getMessage("notification_icon"),
-                    title: chrome.i18n.getMessage("info_title"),
-                    message: chrome.i18n.getMessage("write_to_clipboard"),
-                    contextMessage: chrome.i18n.getMessage("write_to_clipboard_hinter"),
-                });
-           });
+        }).then(arrayBuffer => {
+            chrome.downloads.download({
+                url: URL.createObjectURL(new Blob([arrayBuffer], {type: "image/png"})),
+            });
         });
+
+        // new Promise((resolve, reject) => {
+        //     /**
+        //      * WARN: url of fetch can't be a object url (blob:http...)
+        //      */
+        //     const xhr = new XMLHttpRequest();
+        //     xhr.open("GET", message.srcUrl, true);
+        //     xhr.responseType = "arraybuffer";
+        //     xhr.onloadend = e => {
+        //         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+        //             resolve(xhr.response);
+        //         } else {
+        //             reject(xhr.status);
+        //         }
+        //     };
+        //     xhr.send();
+        // }).then(arrayBuffer => filePurity([{
+        //     blob: new Blob([arrayBuffer], {type: "image/png"}),
+        //     mimeType: "image/png",
+        //     readType: "arrayBuffer",
+        //     result: arrayBuffer,
+        // }])).then(result => fileUpload(result)).then(result => {
+        //     const buffer = [];
+        //     for (const item of result) {
+        //         const url = `${defaultPrefix + item.pid + acceptType[item.mimeType].typo + defaultSuffix}`;
+        //         buffer.push(url);
+        //     }
+        //     const text = buffer.join("\n");
+        //     Utils.writeToClipboard(text, () => {
+        //         text && chrome.notifications.create(notifyId, {
+        //             type: "basic",
+        //             iconUrl: chrome.i18n.getMessage("notification_icon"),
+        //             title: chrome.i18n.getMessage("info_title"),
+        //             message: chrome.i18n.getMessage("write_to_clipboard"),
+        //             contextMessage: chrome.i18n.getMessage("write_to_clipboard_hinter"),
+        //         });
+        //    });
+        // });
     }
 });
 

@@ -101,7 +101,7 @@ export const transformCanvasFrames = canvas => {
                 const detla = Math.min(Math.max(Math.floor(recorder.sindex * tolerant.ratio), tolerant.lower), tolerant.upper);
                 if (stats.fail <= detla) {
                     clearInterval(recorder.tid);
-                    console.log("Frames:", fragment.length, fragment);
+                    console.log("Frames:", fragment.length);
                     if (fragment.length) {
                         const buffers = [];
                         const delays = [];
