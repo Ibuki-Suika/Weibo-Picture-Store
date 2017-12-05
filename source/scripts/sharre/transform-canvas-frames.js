@@ -4,7 +4,7 @@ import {
     resolveBlobs,
 } from "./share-between-pages.js";
 import {transferType} from "../base/register.js";
-import APNGCodec from "../../APNG-Codec/source/apng-codec.js";
+import {apngCodecWorkerContent} from "./apng-codec-worker.js";
 
 export const transformCanvasFrames = canvas => {
     if (!(canvas && canvas.tagName && canvas.tagName.toUpperCase() === "CANVAS")) {
@@ -101,7 +101,7 @@ export const transformCanvasFrames = canvas => {
                 const detla = Math.min(Math.max(Math.floor(recorder.sindex * tolerant.ratio), tolerant.lower), tolerant.upper);
                 if (stats.fail <= detla) {
                     clearInterval(recorder.tid);
-                    console.log("Frames:", fragment.length);
+                    console.log("Frames:", fragment.length, fragment);
                     if (fragment.length) {
                         const buffers = [];
                         const delays = [];
@@ -110,18 +110,33 @@ export const transformCanvasFrames = canvas => {
                             delays.push(i === 0 ? 0 : fragment[i].timeStamp - fragment[i - 1].timeStamp);
                         }
 
+                        const workerSrcUrl = `data:text/javascript;base64,${btoa(apngCodecWorkerContent)}`;
+                        const apngCodecWorker = new Worker(workerSrcUrl);
+                        const workerScriptUrls = [
+                            chrome.runtime.getURL("APNG-Codec/classic/pako.js"),
+                            chrome.runtime.getURL("APNG-Codec/classic/apng-codec.js"),
+                        ];
+                        apngCodecWorker.postMessage({buffers, w, h, delays, workerScriptUrls});
+                        apngCodecWorker.onmessage = e => {
+                            const {arrayBuffer} = e.data;
+                            chrome.runtime.sendMessage({
+                                type: transferType.fromCanvasFrame,
+                                srcUrl: URL.createObjectURL(new Blob([arrayBuffer], {type: "image/png"})),
+                            });
+                        };
+
                         /**
                          * @see https://bugs.chromium.org/p/chromium/issues/detail?id=680046
                          * @todo Use Web Worker
                          */
-                        console.time("APNG Encoder");
-                        const arrayBuffer = APNGCodec.encode(buffers, w, h, 0, delays);
-                        console.timeEnd("APNG Encoder");
-
-                        chrome.runtime.sendMessage({
-                            type: transferType.fromCanvasFrame,
-                            srcUrl: URL.createObjectURL(new Blob([arrayBuffer], {type: "image/png"})),
-                        });
+                        // console.time("APNG Encoder");
+                        // const arrayBuffer = APNGCodec.encode(buffers, w, h, 0, delays);
+                        // console.timeEnd("APNG Encoder");
+                        //
+                        // chrome.runtime.sendMessage({
+                        //     type: transferType.fromCanvasFrame,
+                        //     srcUrl: URL.createObjectURL(new Blob([arrayBuffer], {type: "image/png"})),
+                        // });
                     }
                     return;
                 }
