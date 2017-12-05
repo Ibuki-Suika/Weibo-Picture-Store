@@ -3,8 +3,8 @@ import {
     defaultSuffix,
     resolveBlobs,
 } from "./share-between-pages.js";
-import {Utils} from "../base/utils.js";
 import {transferType} from "../base/register.js";
+import APNGCodec from "../../APNG-Codec/source/apng-codec.js";
 
 export const transformCanvasFrames = canvas => {
     if (!(canvas && canvas.tagName && canvas.tagName.toUpperCase() === "CANVAS")) {
@@ -103,15 +103,24 @@ export const transformCanvasFrames = canvas => {
                     clearInterval(recorder.tid);
                     console.log("Frames:", fragment.length);
                     if (fragment.length) {
-                        const buffers = []; // string[]
+                        const buffers = [];
                         const delays = [];
                         for (let i = 0; i < fragment.length; i++) {
-                            buffers.push(Utils.bufferEncode(fragment[i].imgData.data.buffer));
+                            buffers.push(fragment[i].imgData.data.buffer);
                             delays.push(i === 0 ? 0 : fragment[i].timeStamp - fragment[i - 1].timeStamp);
                         }
+
+                        /**
+                         * @see https://bugs.chromium.org/p/chromium/issues/detail?id=680046
+                         * @todo Use Web Worker
+                         */
+                        console.time("APNG Encoder");
+                        const arrayBuffer = APNGCodec.encode(buffers, w, h, 0, delays);
+                        console.timeEnd("APNG Encoder");
+
                         chrome.runtime.sendMessage({
                             type: transferType.fromCanvasFrame,
-                            data: {buffers, delays, w, h},
+                            srcUrl: URL.createObjectURL(new Blob([arrayBuffer], {type: "image/png"})),
                         });
                     }
                     return;
